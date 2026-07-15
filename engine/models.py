@@ -6,7 +6,7 @@ class RoomType(str, Enum):
     DELUXE = "deluxe"
     SUITE = "suite"
 
-@dataclass
+@dataclass(frozen=True)
 class Room:
     room_id: str
     floor: int
@@ -33,7 +33,7 @@ class Room:
 
         return base_time + night_adjustment + guest_adjustment
 
-@dataclass
+@dataclass(frozen=True)
 class Housekeeper:
     housekeeper_id: str
     start_floor: int
