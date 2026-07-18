@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from engine.travel import calculate_travel_time
 
 class RoomType(str, Enum):
     STANDARD = "standard"
@@ -46,10 +47,12 @@ class Housekeeper:
         return room.base_clean_time() * self.speed_multiplier
     
     def travel_time(self, room: Room) -> float:
-        floor_change_minutes = abs(self.start_floor - room.floor) * 3.0
-        hallway_minutes = abs(self.start_position - room.position) * 0.5
-
-        return floor_change_minutes + hallway_minutes
+        return calculate_travel_time(
+        start_floor=self.start_floor,
+        start_position=self.start_position,
+        end_floor=room.floor,
+        end_position=room.position,
+    )
     
 room = Room(
     room_id="301",

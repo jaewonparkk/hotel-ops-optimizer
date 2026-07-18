@@ -1,5 +1,7 @@
+import math
 import random
 
+from engine.matrix import calculate_slots_per_housekeeper
 from engine.models import Housekeeper, Room, RoomType
 
 
@@ -113,26 +115,52 @@ def _ensure_suite_coverage(
     rooms: list[Room],
     housekeepers: list[Housekeeper],
 ) -> None:
-    has_suite = any(
+    number_of_suites = sum(
         room.room_type == RoomType.SUITE
         for room in rooms
     )
 
-    has_certified_housekeeper = any(
+    if number_of_suites == 0:
+        return
+
+    slots_per_housekeeper = calculate_slots_per_housekeeper(
+        number_of_rooms=len(rooms),
+        number_of_housekeepers=len(housekeepers),
+    )
+
+    required_certified_housekeepers = math.ceil(
+        number_of_suites / slots_per_housekeeper
+    )
+
+    currently_certified = sum(
         housekeeper.certified_for_suites
         for housekeeper in housekeepers
     )
 
-    if not has_suite or has_certified_housekeeper:
+    additional_certifications_needed = max(
+        0,
+        required_certified_housekeepers - currently_certified,
+    )
+
+    if additional_certifications_needed == 0:
         return
 
-    first_housekeeper = housekeepers[0]
+    uncertified_indices = [
+        index
+        for index, housekeeper in enumerate(housekeepers)
+        if not housekeeper.certified_for_suites
+    ]
 
-    housekeepers[0] = Housekeeper(
-        housekeeper_id=first_housekeeper.housekeeper_id,
-        start_floor=first_housekeeper.start_floor,
-        start_position=first_housekeeper.start_position,
-        speed_multiplier=first_housekeeper.speed_multiplier,
-        available_at_minute=first_housekeeper.available_at_minute,
-        certified_for_suites=True,
-    )
+    for index in uncertified_indices[
+        :additional_certifications_needed
+    ]:
+        housekeeper = housekeepers[index]
+
+        housekeepers[index] = Housekeeper(
+            housekeeper_id=housekeeper.housekeeper_id,
+            start_floor=housekeeper.start_floor,
+            start_position=housekeeper.start_position,
+            speed_multiplier=housekeeper.speed_multiplier,
+            available_at_minute=housekeeper.available_at_minute,
+            certified_for_suites=True,
+        )

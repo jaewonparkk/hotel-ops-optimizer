@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from statistics import mean, pstdev
 
 from engine.models import Assignment
+from engine.travel import calculate_travel_time
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,65 @@ class EvaluationMetrics:
     total_cost: float
 
 
+def group_assignments_by_housekeeper(
+    assignments: list[Assignment],
+) -> dict[str, list[Assignment]]:
+    assignments_by_housekeeper: dict[
+        str,
+        list[Assignment],
+    ] = defaultdict(list)
+
+    for assignment in assignments:
+        housekeeper_id = assignment.housekeeper.housekeeper_id
+        assignments_by_housekeeper[housekeeper_id].append(assignment)
+
+    return dict(assignments_by_housekeeper)
+
+
+def calculate_route_travel_times(
+    assignments: list[Assignment],
+) -> dict[str, float]:
+    """
+    Calculate actual travel time for each assigned room.
+
+    The first room is reached from the housekeeper's starting location.
+    Every later room is reached from the previously assigned room.
+    """
+    assignments_by_housekeeper = group_assignments_by_housekeeper(
+        assignments
+    )
+
+    travel_times: dict[str, float] = {}
+
+    for housekeeper_assignments in assignments_by_housekeeper.values():
+        ordered_assignments = sorted(
+            housekeeper_assignments,
+            key=lambda assignment: assignment.slot_index,
+        )
+
+        housekeeper = ordered_assignments[0].housekeeper
+
+        previous_floor = housekeeper.start_floor
+        previous_position = housekeeper.start_position
+
+        for assignment in ordered_assignments:
+            room = assignment.room
+
+            travel_time = calculate_travel_time(
+                start_floor=previous_floor,
+                start_position=previous_position,
+                end_floor=room.floor,
+                end_position=room.position,
+            )
+
+            travel_times[room.room_id] = travel_time
+
+            previous_floor = room.floor
+            previous_position = room.position
+
+    return travel_times
+
+
 def calculate_completion_times(
     assignments: list[Assignment],
 ) -> dict[str, float]:
@@ -24,15 +84,14 @@ def calculate_completion_times(
     Assignments are processed by housekeeper and slot order.
     Completion time includes:
     - housekeeper availability
-    - travel time
+    - actual route travel time
     - cleaning time
     """
-    assignments_by_housekeeper: dict[str, list[Assignment]] = defaultdict(list)
+    assignments_by_housekeeper = group_assignments_by_housekeeper(
+        assignments
+    )
 
-    for assignment in assignments:
-        assignments_by_housekeeper[
-            assignment.housekeeper.housekeeper_id
-        ].append(assignment)
+    route_travel_times = calculate_route_travel_times(assignments)
 
     room_completion_times: dict[str, float] = {}
 
@@ -42,19 +101,21 @@ def calculate_completion_times(
             key=lambda assignment: assignment.slot_index,
         )
 
-        current_time = ordered_assignments[
-            0
-        ].housekeeper.available_at_minute
+        current_time = (
+            ordered_assignments[0]
+            .housekeeper
+            .available_at_minute
+        )
 
         for assignment in ordered_assignments:
+            room_id = assignment.room.room_id
+
             current_time += (
-                assignment.travel_time
+                route_travel_times[room_id]
                 + assignment.cleaning_time
             )
 
-            room_completion_times[
-                assignment.room.room_id
-            ] = current_time
+            room_completion_times[room_id] = current_time
 
     return room_completion_times
 
@@ -64,14 +125,19 @@ def calculate_workloads(
 ) -> dict[str, float]:
     """
     Calculate total working time for each housekeeper.
+
+    Workload includes actual route travel time and cleaning time.
     """
+    route_travel_times = calculate_route_travel_times(assignments)
+
     workloads: dict[str, float] = defaultdict(float)
 
     for assignment in assignments:
         housekeeper_id = assignment.housekeeper.housekeeper_id
+        room_id = assignment.room.room_id
 
         workloads[housekeeper_id] += (
-            assignment.travel_time
+            route_travel_times[room_id]
             + assignment.cleaning_time
         )
 
@@ -93,20 +159,19 @@ def evaluate_assignments(
 
     completion_times = calculate_completion_times(assignments)
     workloads = calculate_workloads(assignments)
+    route_travel_times = calculate_route_travel_times(assignments)
 
     makespan = max(completion_times.values())
 
     workload_values = list(workloads.values())
+
     workload_std = (
         pstdev(workload_values)
         if len(workload_values) > 1
         else 0.0
     )
 
-    total_travel = sum(
-        assignment.travel_time
-        for assignment in assignments
-    )
+    total_travel = sum(route_travel_times.values())
 
     vip_ready_times = [
         completion_times[assignment.room.room_id]
