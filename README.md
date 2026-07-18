@@ -168,7 +168,16 @@ Total Cost         ↓2.3%
 ```
 
 ---
+## Documentation
 
+Detailed project documentation is available in Google Drive: **Project Documentation:** [Google Drive Folder](https://drive.google.com/drive/u/0/folders/1mfeK7ix8SiyJAVVtCKV1Qs0J_rruAPv5)
+
+- Research and current solutions
+- Project overview
+- Algorithm and cost-function design
+- Technical architecture
+
+---
 ## Future Work
 
 - Multi-day scheduling
