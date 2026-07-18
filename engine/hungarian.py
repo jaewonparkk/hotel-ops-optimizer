@@ -45,6 +45,8 @@ def assign_rooms_hungarian(
                 housekeeper=slot.housekeeper,
                 room=room,
                 slot_index=slot.slot_index,
+                travel_time=slot.housekeeper.travel_time(room),
+                cleaning_time=slot.housekeeper.clean_time(room),
                 cost=selected_cost,
             )
         )

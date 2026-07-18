@@ -77,3 +77,12 @@ class Assignment:
     room: Room
     slot_index: int
     cost: float
+
+@dataclass(frozen=True)
+class Assignment:
+    housekeeper: Housekeeper
+    room: Room
+    slot_index: int
+    travel_time: float
+    cleaning_time: float
+    cost: float
