@@ -1,24 +1,45 @@
-from engine.models import Housekeeper, Room
+from engine.models import Housekeeper, Room, RoomType
 
 
-FLOOR_CHANGE_COST = 20.0
+TRAVEL_WEIGHT = 1.0
+CLEAN_WEIGHT = 1.0
+SLOT_WEIGHT = 5.0
+PRIORITY_WEIGHT = 10.0
+INFEASIBLE_COST = 1_000_000.0
 
 
-def calculate_travel_distance(
-    housekeeper: Housekeeper,
+def slot_penalty(slot_index: int) -> float:
+    return SLOT_WEIGHT * slot_index
+
+
+def priority_penalty(room: Room, slot_index: int) -> float:
+    return PRIORITY_WEIGHT * room.priority * slot_index
+
+
+def assignment_cost(
     room: Room,
+    housekeeper: Housekeeper,
+    slot_index: int,
 ) -> float:
-    floor_distance = (
-        abs(housekeeper.start_floor - room.floor)
-        * FLOOR_CHANGE_COST
+    if (
+        room.room_type == RoomType.SUITE
+        and not housekeeper.certified_for_suites
+    ):
+        return INFEASIBLE_COST
+
+    travel_cost = (
+        TRAVEL_WEIGHT
+        * housekeeper.travel_time(room)
     )
 
-    hallway_distance = abs(
-        housekeeper.start_position - room.position
+    clean_cost = (
+        CLEAN_WEIGHT
+        * housekeeper.clean_time(room)
     )
 
-    
-
-    return floor_distance + hallway_distance
-
-
+    return (
+        travel_cost
+        + clean_cost
+        + slot_penalty(slot_index)
+        + priority_penalty(room, slot_index)
+    )
