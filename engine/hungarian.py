@@ -1,45 +1,36 @@
-from collections import defaultdict
-
 from scipy.optimize import linear_sum_assignment
 
 from engine.cost import INFEASIBLE_COST
 from engine.matrix import build_cost_matrix
-from engine.models import Housekeeper, Room
+from engine.models import Assignment, Housekeeper, Room
 
 
 def assign_rooms_hungarian(
     rooms: list[Room],
     housekeepers: list[Housekeeper],
-) -> dict[str, list[Room]]:
+) -> list[Assignment]:
     if not rooms:
-        return {
-            housekeeper.housekeeper_id: []
-            for housekeeper in housekeepers
-        }
+        return []
 
     cost_matrix, slots = build_cost_matrix(
         rooms=rooms,
         housekeepers=housekeepers,
     )
 
-    room_indices, slot_indices = linear_sum_assignment(
+    room_indices, column_indices = linear_sum_assignment(
         cost_matrix
     )
 
-    assignments_with_slots: dict[
-        str,
-        list[tuple[int, Room]],
-    ] = defaultdict(list)
+    assignments: list[Assignment] = []
 
-    for room_index, slot_index in zip(
+    for room_index, column_index in zip(
         room_indices,
-        slot_indices,
+        column_indices,
         strict=True,
     ):
-        selected_cost = cost_matrix[
-            room_index,
-            slot_index,
-        ]
+        selected_cost = float(
+            cost_matrix[room_index, column_index]
+        )
 
         if selected_cost >= INFEASIBLE_COST:
             raise ValueError(
@@ -47,27 +38,22 @@ def assign_rooms_hungarian(
             )
 
         room = rooms[room_index]
-        slot = slots[slot_index]
+        slot = slots[column_index]
 
-        assignments_with_slots[
-            slot.housekeeper.housekeeper_id
-        ].append(
-            (slot.slot_index, room)
+        assignments.append(
+            Assignment(
+                housekeeper=slot.housekeeper,
+                room=room,
+                slot_index=slot.slot_index,
+                cost=selected_cost,
+            )
         )
 
-    assignments: dict[str, list[Room]] = {}
-
-    for housekeeper in housekeepers:
-        housekeeper_id = housekeeper.housekeeper_id
-
-        ordered_assignments = sorted(
-            assignments_with_slots[housekeeper_id],
-            key=lambda item: item[0],
+    assignments.sort(
+        key=lambda assignment: (
+            assignment.housekeeper.housekeeper_id,
+            assignment.slot_index,
         )
-
-        assignments[housekeeper_id] = [
-            room
-            for _, room in ordered_assignments
-        ]
+    )
 
     return assignments

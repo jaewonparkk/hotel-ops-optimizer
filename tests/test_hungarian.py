@@ -1,7 +1,7 @@
 import pytest
 
 from engine.hungarian import assign_rooms_hungarian
-from engine.models import Housekeeper, Room, RoomType
+from engine.models import Assignment, Housekeeper, Room, RoomType
 
 
 def make_room(
@@ -39,6 +39,16 @@ def make_housekeeper(
     )
 
 
+def test_returns_assignment_objects() -> None:
+    assignments = assign_rooms_hungarian(
+        rooms=[make_room("101")],
+        housekeepers=[make_housekeeper("H1")],
+    )
+
+    assert len(assignments) == 1
+    assert isinstance(assignments[0], Assignment)
+
+
 def test_assigns_every_room_once() -> None:
     rooms = [
         make_room("101"),
@@ -58,9 +68,8 @@ def test_assigns_every_room_once() -> None:
     )
 
     assigned_room_ids = [
-        room.room_id
-        for assigned_rooms in assignments.values()
-        for room in assigned_rooms
+        assignment.room.room_id
+        for assignment in assignments
     ]
 
     assert sorted(assigned_room_ids) == [
@@ -70,17 +79,29 @@ def test_assigns_every_room_once() -> None:
         "202",
     ]
 
+    assert len(assigned_room_ids) == len(set(assigned_room_ids))
 
-def test_returns_all_housekeepers() -> None:
+
+def test_assignments_use_known_housekeepers() -> None:
+    housekeepers = [
+        make_housekeeper("H1"),
+        make_housekeeper("H2"),
+    ]
+
     assignments = assign_rooms_hungarian(
-        rooms=[make_room("101")],
-        housekeepers=[
-            make_housekeeper("H1"),
-            make_housekeeper("H2"),
+        rooms=[
+            make_room("101"),
+            make_room("102"),
         ],
+        housekeepers=housekeepers,
     )
 
-    assert set(assignments) == {"H1", "H2"}
+    assigned_housekeeper_ids = {
+        assignment.housekeeper.housekeeper_id
+        for assignment in assignments
+    }
+
+    assert assigned_housekeeper_ids.issubset({"H1", "H2"})
 
 
 def test_suite_is_assigned_to_certified_housekeeper() -> None:
@@ -103,8 +124,10 @@ def test_suite_is_assigned_to_certified_housekeeper() -> None:
         ],
     )
 
-    assert assignments["H1"] == []
-    assert assignments["H2"][0].room_id == "301"
+    assert len(assignments) == 1
+    assert assignments[0].room.room_id == "301"
+    assert assignments[0].housekeeper.housekeeper_id == "H2"
+    assert assignments[0].housekeeper.certified_for_suites is True
 
 
 def test_raises_when_no_feasible_suite_assignment_exists() -> None:
@@ -128,7 +151,7 @@ def test_raises_when_no_feasible_suite_assignment_exists() -> None:
         )
 
 
-def test_empty_rooms_returns_empty_assignments() -> None:
+def test_empty_rooms_returns_empty_list() -> None:
     assignments = assign_rooms_hungarian(
         rooms=[],
         housekeepers=[
@@ -137,7 +160,47 @@ def test_empty_rooms_returns_empty_assignments() -> None:
         ],
     )
 
-    assert assignments == {
-        "H1": [],
-        "H2": [],
-    }
+    assert assignments == []
+
+
+def test_assignments_are_sorted_by_housekeeper_and_slot() -> None:
+    assignments = assign_rooms_hungarian(
+        rooms=[
+            make_room("101"),
+            make_room("102"),
+            make_room("201", floor=2),
+            make_room("202", floor=2),
+        ],
+        housekeepers=[
+            make_housekeeper("H1", start_floor=1),
+            make_housekeeper("H2", start_floor=2),
+        ],
+    )
+
+    assignment_order = [
+        (
+            assignment.housekeeper.housekeeper_id,
+            assignment.slot_index,
+        )
+        for assignment in assignments
+    ]
+
+    assert assignment_order == sorted(assignment_order)
+
+
+def test_assignment_costs_are_nonnegative() -> None:
+    assignments = assign_rooms_hungarian(
+        rooms=[
+            make_room("101"),
+            make_room("102"),
+        ],
+        housekeepers=[
+            make_housekeeper("H1"),
+            make_housekeeper("H2"),
+        ],
+    )
+
+    assert all(
+        assignment.cost >= 0
+        for assignment in assignments
+    )
