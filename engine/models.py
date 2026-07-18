@@ -70,3 +70,10 @@ housekeeper = Housekeeper(
     available_at_minute=0,
     certified_for_suites=True,
 )
+
+@dataclass(frozen=True)
+class Assignment:
+    housekeeper: Housekeeper
+    room: Room
+    slot_index: int
+    cost: float
