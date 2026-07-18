@@ -1,42 +1,184 @@
-# HouseFlow
+# 🏨 Hotel Ops Optimizer
 
-HouseFlow is a full-stack hotel housekeeping assignment platform powered by an optimization engine.
+An end-to-end optimization platform that generates efficient housekeeping schedules using the Hungarian Algorithm.
 
-The project has two stages:
 
-1. Benchmark multiple room-assignment algorithms using metrics such as workload balance, travel time, room readiness, deadline misses, and runtime.
-2. Integrate the best-performing approach into a web application where hotel supervisors can enter room and staff information and automatically generate optimized assignments.
+![Demo](docs/demo.gif)
+
+---
+
+## Overview
+
+Hotel housekeeping managers often assign rooms manually or using simple greedy heuristics. As the number of rooms and staff grows, these approaches can lead to:
+
+- Long overall completion times
+- Excessive staff travel
+- Uneven workloads
+- Missed high-priority rooms
+
+Hotel Ops Optimizer models housekeeping scheduling as an assignment optimization problem and compares a Greedy baseline against the Hungarian Algorithm.
+
+---
+
+## Features
+
+- Interactive React frontend
+- FastAPI backend
+- Hungarian assignment optimization
+- Greedy baseline for comparison
+- Automatic performance metrics
+- Scenario benchmarking
+- REST API
+- Fully tested with pytest
+
+---
+
+## Algorithms
+
+### Greedy
+
+Assigns each room sequentially to the locally cheapest housekeeper.
+
+Pros
+
+- Fast
+- Simple
+
+Cons
+
+- Doesn't consider the global optimum.
+
+---
+
+### Hungarian
+
+Constructs a complete assignment cost matrix and computes the globally optimal assignment.
+
+Optimizes
+
+- Makespan
+- Travel distance
+- Workload balance
+- Total assignment cost
+
+---
+
+## Metrics
+
+Each generated schedule reports
+
+- Makespan
+- Total travel
+- Workload standard deviation
+- VIP completion time
+- Deadline misses
+- Total optimization cost
+
+---
+
+## Demo
+
+### 1. Input Interface
+
+<img src="docs/1.png" width="900">
+
+### 2. Greedy vs Hungarian Comparison
+
+<img src="docs/2.png" width="900">
+
+### 3. Generated Housekeeping Schedule
+
+<img src="docs/3.png" width="900">
+
+### 4. Benchmark Results
+
+<img src="docs/4.png" width="900">
+---
+
+## Tech Stack
+
+Frontend
+
+- React
+- TypeScript
+- Vite
+
+Backend
+
+- FastAPI
+- Pydantic
+
+Optimization
+
+- NumPy
+- SciPy
+- Hungarian Algorithm
+
+Testing
+
+- pytest
+
+---
 
 ## Project Structure
 
-- `experiments/` — algorithm implementations and benchmarks
-- `backend/` — FastAPI application and production optimization engine
-- `frontend/` — web interface for entering data and viewing assignments
-- `docs/` — technical design and experiment documentation
+```text
+backend/
+engine/
+frontend/
+experiments/
+tests/
+```
 
-## Planned Algorithms
+---
 
-- Greedy assignment
-- Hungarian algorithm with slot expansion
-- Additional optimization methods if needed
+## Running Locally
 
-## Planned Evaluation Metrics
+### Backend
 
-- Makespan
-- Workload standard deviation
-- Total travel time
-- VIP room mean ready time
-- Deadline misses
-- Algorithm runtime
+```bash
+python -m uvicorn backend.main:app --reload
+```
 
-## Current Status
+### Frontend
 
-- [x] Define the project scope
-- [x] Create the initial repository structure
-- [ ] Define the first simulation scenario
-- [ ] Implement the cleaning-time function
-- [ ] Implement the greedy baseline
-- [ ] Implement the Hungarian-based approach
-- [ ] Run benchmarks
-- [ ] Build the backend API
-- [ ] Build the frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## Benchmark
+
+The repository includes a benchmark that compares Greedy and Hungarian across randomly generated hotel scenarios.
+
+```bash
+python -m experiments.benchmark2
+```
+
+Example output
+
+```text
+Makespan           ↓27.8%
+Travel             ↓22.8%
+Workload STD       ↓68.0%
+Total Cost         ↓2.3%
+```
+
+---
+
+## Future Work
+
+- Multi-day scheduling
+- Shift constraints
+- Dynamic room arrivals
+- Interactive floor map
+- Real hotel PMS integration
+
+---
+
+## Author
+
+Jaewon Park
