@@ -70,6 +70,3 @@ housekeeper = Housekeeper(
     available_at_minute=0,
     certified_for_suites=True,
 )
-
-print(housekeeper.clean_time(room))
-print(housekeeper.travel_time(room)) 
